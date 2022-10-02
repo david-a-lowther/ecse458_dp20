@@ -17,9 +17,11 @@ def main_group():
 def plot_group():
     pass
 
+
 @main_group.group('nn')
 def neural_group():
     pass
+
 
 plot_group.add_command(plot_csv_magnetic, "std")
 plot_group.add_command(plot_csv_energy, "energy")
