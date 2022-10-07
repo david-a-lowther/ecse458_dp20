@@ -1,4 +1,4 @@
-# Hysteresis data plotter
+# Hysteresis data plotter, Neural Network
 Implemented using Python 3 with matplotlib
 
 ## neural.py:
