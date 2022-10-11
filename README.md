@@ -1,7 +1,10 @@
 # Hysteresis data plotter, Neural Network
 Implemented using Python 3 with matplotlib
 
-## neural.py:
-Implements a preliminary feedforward neural network, trained with a small amount of data (no testing or validation data as of yet)
+[Link to OneDrive](https://mcgill-my.sharepoint.com/:f:/r/personal/christos_cunning_mail_mcgill_ca/Documents/ECSE%20458%20-%20DP%2020?csf=1&web=1&e=xV39kS)
 
-TODO: Create more models: Recurrent & Preisach
+## Instructions for virtual environment:
+- [Instructions for PyCharm](https://www.jetbrains.com/help/pycharm/creating-virtual-environment.html#python_create_virtual_env)
+- [Instructions for command line](https://docs.python.org/3/library/venv.html)
+
+## Contents of files:
