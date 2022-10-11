@@ -19,6 +19,16 @@ def format_data(H, B):
 
     return x_train, y_train
 
+def train_and_generate_NAME_network(x_train, y_train, savename, n_epochs=100):
+    savename = "models/" + savename
+    # Define model structure
+    # Generate model
+    # Compile model
+    # Train model
+    # Save model
+    # Return model
+
+
 
 def train_and_generate_network_feedforward(x_train, y_train, n_epochs):
     model = tf.keras.models.Sequential()  # Create a sequential structure
