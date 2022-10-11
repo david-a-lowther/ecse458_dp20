@@ -6,6 +6,6 @@ Implemented using Python 3 with matplotlib
 ## Instructions for virtual environment:
 - [Instructions for PyCharm](https://www.jetbrains.com/help/pycharm/creating-virtual-environment.html#python_create_virtual_env)
 - [Instructions for command line](https://docs.python.org/3/library/venv.html)
-- To use venv, activate it, and inside the project folder do `pip install requirements.txt`
+- To use venv, activate it, and inside the project folder do `pip install -r requirements.txt`
 
 ## Contents of files:
