@@ -1,12 +1,8 @@
 import tensorflow as tf
-from tensorflow import keras
 from keras import backend as K
 import numpy as np
-import csv
-from keras.utils.generic_utils import get_custom_objects
-import tensorflow.keras.metrics as metrics
 from keras.layers import Layer, Activation
-import itertools
+import matplotlib.pyplot as plt
 
 
 class LayerTest(Layer):
@@ -28,7 +24,35 @@ class LayerTest(Layer):
 
 
 def stop_operator(x):
-    return K.sigmoid(x)
+    e = min(1, max(-1, x))
+    return e
+
+
+# applies operator to a tensor instead of individual values like above
+def stop_operator_tensor(x):
+    # array of positive and negative ones
+    ones = K.zeros_like(x) + 1
+    neg_ones = K.zeros_like(x) - 1
+    e = K.minimum(ones, K.maximum(neg_ones, x))
+    return e
+
+
+def plot_activation_function(activation_f):
+    x = np.linspace(-2, 2, num=100)
+    y = np.empty_like(x)
+    for i in range(x.shape[0]):
+        y[i] = activation_f(x[i])
+    plt.plot(x, y)
+    plt.show()
+
+
+# different function because K.softmax takes input as tensor
+# instead of individual values, so above function will not work for it
+def plot_tensor_activation_function(activation_tensor_f):
+    x = tf.linspace(-2, 2, num=100)
+    y = activation_tensor_f(x)
+    plt.plot(x, y)
+    plt.show()
 
 
 def make_activator(activations):
@@ -43,46 +67,13 @@ def make_activator(activations):
                 activated.append(activations[1](slice))
             i += 1
         return tf.stack(activated)
+
     return activator
 
-
-def train_neural_net(x_train, y_train, n_epochs=100):
-    model = tf.keras.models.Sequential()  # Create a sequential structure
-    model.add(tf.keras.layers.Dense(1, activation='linear'))  # Input layer (3 values for now)
-    model.add((tf.keras.layers.Dense(128, activation=make_activator([K.sigmoid, K.sigmoid])))) # Hidden layer, 128 neurons with sigmoid
-    model.add(tf.keras.layers.Dense(128, activation='sigmoid'))
-    model.add(tf.keras.layers.Dense(1, activation='linear'))  # output layer (next B value)
-    model.compile(
-        optimizer='adam',
-        loss='mean_squared_error',
-        metrics=[
-            metrics.MeanSquaredError()
-        ]
-    )
-
-    model.fit(x_train, y_train, epochs=n_epochs)
-    model.save('models/custom_activation_test.model')
-    model.summary()
-
-
-def extract_csv_info(filename) -> []:
-    """Extracts most crucial data_simulated from csv file (for the purpose of this project)"""
-    file = open('data_simulated/' + filename)
-    csvreader = csv.reader(file)
-    H = np.array([])
-    B = np.array([])
-    i = 0
-    for row in csvreader:
-        if i < 7:
-            i += 1
-            continue
-        H = np.append(H, float(row[2]))
-        B = np.append(B, float(row[3]))
-    file.close()
-    H = H[0:1984]
-    B = B[0:1984]
-    return H[:, np.newaxis], B[:, np.newaxis]
-
-
-d = extract_csv_info('20PNF1500 - Sheet1.csv')
-train_neural_net(d[0], d[1])
+# test stop operator
+# plot_activation_function(stop_operator)
+# compare stop operator activation function to other activation functions
+# plot_activation_function(K.sigmoid)
+# plot_activation_function(K.relu)
+# plot_tensor_activation_function(K.softmax)
+# plot_tensor_activation_function(stop_operator_tensor)
