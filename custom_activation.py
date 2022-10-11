@@ -2,12 +2,12 @@ import tensorflow as tf
 from tensorflow import keras
 from keras import backend as K
 import numpy as np
-import csv
 from keras.utils.generic_utils import get_custom_objects
 import tensorflow.keras.metrics as metrics
 from keras.layers import Layer, Activation
-import itertools
 import matplotlib.pyplot as plt
+
+from data_preprocessing import *
 
 
 class LayerTest(Layer):
@@ -76,12 +76,20 @@ def make_activator(activations):
     return activator
 
 
-def train_neural_net(x_train, y_train, n_epochs=100):
+def train_neural_net(x_train, y_train, n_epochs=100, recurrent=False, savename="control.model"):
     model = tf.keras.models.Sequential()  # Create a sequential structure
     model.add(tf.keras.layers.Dense(1, activation='linear'))  # Input layer (3 values for now)
-    model.add((tf.keras.layers.Dense(128, activation=make_activator(
-        [K.sigmoid, K.sigmoid]))))  # Hidden layer, 128 neurons with sigmoid
+
+    # model.add((tf.keras.layers.Dense(128, activation=make_activator(
+    #     [K.sigmoid, K.sigmoid]))))  # Hidden layer, 128 neurons with sigmoid
     model.add(tf.keras.layers.Dense(128, activation='sigmoid'))
+
+    if recurrent:
+        model.add(tf.keras.layers.Embedding(input_dim=1000, output_dim=64))
+        model.add(tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128)))
+
+    model.add(tf.keras.layers.Dense(128, activation='sigmoid'))
+
     model.add(tf.keras.layers.Dense(1, activation='linear'))  # output layer (next B value)
     model.compile(
         optimizer='adam',
@@ -92,8 +100,9 @@ def train_neural_net(x_train, y_train, n_epochs=100):
     )
 
     model.fit(x_train, y_train, epochs=n_epochs)
-    model.save('models/custom_activation_test.model')
+    model.save('models/' + str(savename))
     model.summary()
+    return model
 
 
 def train_preisach_neural_net(x_train, y_train, n_epochs=100):
@@ -125,93 +134,18 @@ def train_preisach_neural_net(x_train, y_train, n_epochs=100):
 # Given actual output and predicted output
 # predict MSE (mean squared error)
 def compute_mse(actual_y, predicted_y):
+    actual_y = np.asarray(actual_y)
+    predicted_y = np.asarray(predicted_y)
     diff = np.subtract(actual_y, predicted_y)
     squared = np.square(diff)
     mse = np.mean(squared)
     return mse
 
 
-# given list of tuples (x, y)
-# shuffle and split into training and testing set
-# This function needs a lot of work, quick and dirty for now
-def shuffle_and_split(d, info=False):
-    d = np.asarray(d)
-    # need to shuffle but keep x and y together
-
-    x = d[0]
-    y = d[1]
-    x = np.asarray(x)
-    y = np.asarray(y)
-
-    if info:
-        print(str(d[0][1]) + ", " + str(d[1][1]))
-        print(str(d[0][2]) + ", " + str(d[1][2]))
-        print(str(d[0][3]) + ", " + str(d[1][3]))
-        print(str(d[0][4]) + ", " + str(d[1][4]))
-        print(str(d[0][0]) + ", " + str(d[1][0]))
-        print(str(d[0][10]) + ", " + str(d[1][10]))
-
-    train_x = list()
-    train_y = list()
-    test_x = list()
-    test_y = list()
-
-    # for now just put every 10th element into test set
-    for i in range(len(x)):
-        if i % 10 == 0:
-            test_x.append(d[0][i])
-            test_y.append(d[1][i])
-        else:
-            train_x.append(d[0][i])
-            train_y.append(d[1][i])
-
-    train = np.column_stack((train_x, train_y))
-    test = np.column_stack((test_x, test_y))
-
-    print(train[0].shape)
-    train = np.swapaxes(train, 0, 1)
-    test = np.swapaxes(test, 0, 1)
-    print(train[0].shape)
-
-    # train_x = tf.convert_to_tensor(train_x)
-    # train_y = tf.convert_to_tensor(train_y)
-    # test_x = tf.convert_to_tensor(test_x)
-    # test_y = tf.convert_to_tensor(test_y)
-
-    if info:
-        train_x = train[0]
-        train_y = train[1]
-        test_x = test[0]
-        test_y = test[1]
-        print("After")
-        print(str(train_x[0]) + ", " + str(train_y[0]))
-        print(str(train_x[1]) + ", " + str(train_y[1]))
-        print(str(train_x[2]) + ", " + str(train_y[2]))
-        print(str(train_x[3]) + ", " + str(train_y[3]))
-
-        print(str(test_x[0]) + ", " + str(test_y[0]))
-        print(str(test_x[1]) + ", " + str(test_y[1]))
-
-    return train, test
-
-
-def extract_csv_info(filename) -> []:
-    """Extracts most crucial data_simulated from csv file (for the purpose of this project)"""
-    file = open('data_simulated/' + filename)
-    csvreader = csv.reader(file)
-    H = np.array([])
-    B = np.array([])
-    i = 0
-    for row in csvreader:
-        if i < 7:
-            i += 1
-            continue
-        H = np.append(H, float(row[2]))
-        B = np.append(B, float(row[3]))
-    file.close()
-    H = H[0:1984]
-    B = B[0:1984]
-    return H[:, np.newaxis], B[:, np.newaxis]
+# test compute mse
+y = [11,20,19,17,10]
+y_pred = [12,18,19.5,18,9]
+print(compute_mse(y, y_pred))
 
 
 # test stop operator
@@ -227,19 +161,122 @@ def extract_csv_info(filename) -> []:
 #model = train_neural_net(d[0], d[1])
 
 
-# train and test priesach neural network
-d = extract_csv_info('20PNF1500 - Sheet1.csv')
-train, test = shuffle_and_split(d, True)
+# train and test control vs preisach neural network
+raw_data = extract_csv_info("./data_simulated/M19_29Gauge - Sheet1.csv")
+# format into (current H, current B, next H, next B)
+formatted_data = format_data(raw_data)
+train, test = shuffle_and_split(formatted_data)
+train_x, train_y = split_input_output(train)
+test_x, test_y = split_input_output(test)
 
-# train
-model = train_preisach_neural_net(train[0], train[1], 10)
 
-# test
-prediction = model.predict(test[0])
-# compute mean squared error
-mse = compute_mse(test[1], prediction)
-# compare first 10 elements of actual vs predicated values for test output
-print(test[0][:10])
-print(test[1][:10])
-print(list(prediction[:10]))
-print("MSE (test set): " + str(mse))
+# train normal net
+print("Control NN:")
+control_model = train_neural_net(train_x, train_y, 20)
+# test pnn
+control_pred = control_model.predict(test_x)
+# compute error
+control_mse = compute_mse(test_y, control_pred)
+print("MSE: " + str(control_mse))
+# compare first 10 elements
+print("Actual:")
+print(test_y[:10])
+print("Predicted:")
+print(control_pred.tolist()[:10])
+
+print("Evaluate Control NN:")
+control_model.evaluate(test_x, test_y)
+
+
+print("-------------------------------------")
+
+
+# load model
+# training recurrent is slow so train once and then load model
+#rnn_model = train_neural_net(train_x, train_y, 20, recurrent=True, savename="recurrent_test2.model")
+rnn1_model = tf.keras.models.load_model("./models/recurrent_test.model")
+rnn2_model = tf.keras.models.load_model("./models/recurrent_test2.model")
+
+
+print("-------------------------------------")
+
+print("Preisach NN:")
+# train pnn
+pnn_model = train_preisach_neural_net(train_x, train_y, 20)
+# test pnn
+pnn_pred = pnn_model.predict(test_x)
+# compute error
+pnn_mse = compute_mse(test_y, pnn_pred)
+print("MSE: " + str(pnn_mse))
+# compare first 10 elements
+print("Actual:")
+print(test_y[:10])
+print("Predicted:")
+print(pnn_pred.tolist()[:10])
+
+
+print("Evaluate Preisach NN:")
+pnn_model.evaluate(test_x, test_y)
+
+
+# graph pnn output
+test_data = extract_csv_info("./data_simulated/M19_TESTINGDATA - M19_TESTINGDATA.csv")
+formatted_test_data = format_data(test_data)
+f_test_data_x, f_test_data_y = split_input_output(formatted_test_data)
+
+next_H = list()
+for i in range(len(f_test_data_x)):
+    next_H.append(f_test_data_x[i][2])
+
+# plot actual data
+plt.figure(figsize=(20, 12))
+plt.xlim(-750, 750)
+plt.plot(next_H, f_test_data_y, marker="o", color='black')
+plt.title("Actual Data Plot")
+plt.xlabel("Magnetic Field H (T)")
+plt.ylabel("Magnetic Flux B (A/m)")
+plt.show()
+
+#plot control net predicted data
+control_pred_next_b = control_model.predict(f_test_data_x)
+# plot actual data
+plt.figure(figsize=(20, 12))
+plt.xlim(-750, 750)
+plt.plot(next_H, control_pred_next_b, marker="o", color='black')
+plt.title("Control Net predicted Plot")
+plt.xlabel("Magnetic Field H (T)")
+plt.ylabel("Magnetic Flux B (A/m)")
+plt.show()
+
+# plot test recurrent nn predicted data
+rnn1_pred_next_b = rnn1_model.predict(f_test_data_x)
+# plot actual data
+plt.figure(figsize=(20, 12))
+plt.xlim(-750, 750)
+plt.plot(next_H, rnn1_pred_next_b, marker="o", color='black')
+plt.title("Recurrent NN predicted Plot")
+plt.xlabel("Magnetic Field H (T)")
+plt.ylabel("Magnetic Flux B (A/m)")
+plt.show()
+
+# plot test recurrent nn predicted data
+rnn2_pred_next_b = rnn2_model.predict(f_test_data_x)
+# plot actual data
+plt.figure(figsize=(20, 12))
+plt.xlim(-750, 750)
+plt.plot(next_H, rnn2_pred_next_b, marker="o", color='black')
+plt.title("Recurrent NN predicted Plot")
+plt.xlabel("Magnetic Field H (T)")
+plt.ylabel("Magnetic Flux B (A/m)")
+plt.show()
+
+# plot pnn predicted data
+pnn_pred_next_b = pnn_model.predict(f_test_data_x)
+# plot actual data
+plt.figure(figsize=(20, 12))
+plt.xlim(-750, 750)
+plt.plot(next_H, pnn_pred_next_b, marker="o", color='black')
+plt.title("PNN predicted Plot")
+plt.xlabel("Magnetic Field H (T)")
+plt.ylabel("Magnetic Flux B (A/m)")
+plt.show()
