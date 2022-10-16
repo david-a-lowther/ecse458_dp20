@@ -1,4 +1,6 @@
 /.pytest_cache/
+/__pycache__/
+/.idea
 
 # ignore models folder
-./models
+/models

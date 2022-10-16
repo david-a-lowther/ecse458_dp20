@@ -37,6 +37,12 @@ def stop_operator_tensor(x):
     return e
 
 
+def stop_operator_recurrent(x, x_prev):
+    sum = x_prev**-1 + x + x**-1
+    e = min(1, max(-1, sum))
+    return e
+
+
 def plot_activation_function(activation_f):
     x = np.linspace(-2, 2, num=100)
     y = np.empty_like(x)
@@ -51,6 +57,18 @@ def plot_activation_function(activation_f):
 def plot_tensor_activation_function(activation_tensor_f):
     x = tf.linspace(-2, 2, num=100)
     y = activation_tensor_f(x)
+    plt.plot(x, y)
+    plt.show()
+
+
+def plot_recurrent_activation_function():
+    size = 20
+    x = np.reshape(np.vstack((np.linspace(-1, 1, num=size), np.linspace(1, -1, num=size))), size*2)
+    y = np.empty_like(x)
+    x_prev = -2
+    for i in range(x.shape[0]):
+        y[i] = stop_operator_recurrent(x[i], x_prev)
+        x_prev = x[i]
     plt.plot(x, y)
     plt.show()
 
@@ -70,10 +88,13 @@ def make_activator(activations):
 
     return activator
 
-# test stop operator
+# Test stop operator
 # plot_activation_function(stop_operator)
-# compare stop operator activation function to other activation functions
+# Compare stop operator activation function to other activation functions
 # plot_activation_function(K.sigmoid)
 # plot_activation_function(K.relu)
 # plot_tensor_activation_function(K.softmax)
 # plot_tensor_activation_function(stop_operator_tensor)
+
+plot_recurrent_activation_function()
+
