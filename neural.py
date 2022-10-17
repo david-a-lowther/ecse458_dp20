@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-from custom_activation import stop_operator_tensor
+from custom_activation import stop_operator_tensor, StopOperator
 
 
 def format_data(H, B):
@@ -123,21 +123,17 @@ def train_and_generate_recurrent_preisach_network(x_train, y_train, save_name, n
     """
     Preisach network uses stop operator as neuron activation function for first hidden layer
     """
+
+    act = StopOperator(None)
+
     model = tf.keras.models.Sequential()
-    # input layer
-    model.add(tf.keras.layers.Dense(1, activation='linear'))
-    # stop operator layer
-    model.add(tf.keras.layers.Dense(128, activation=stop_operator_tensor))
-    # recurrent layer
-    model.add(tf.keras.layers.Embedding(input_dim=1000, output_dim=64))
-    model.add(tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128)))
-    # sigmoid layer
-    model.add(tf.keras.layers.Dense(128, activation='sigmoid'))
-    # output layer
-    model.add(tf.keras.layers.Dense(1, activation='linear'))
+    model.add(tf.keras.layers.Dense(1, activation='linear'))                            # input layer
+    model.add(tf.keras.layers.Dense(128, activation=act.stop_operator_recurrent_tensor))    # stop operator layer
+    model.add(tf.keras.layers.Dense(128, activation='sigmoid'))                         # sigmoid layer
+    model.add(tf.keras.layers.Dense(1, activation='linear'))                            # output layer
     # Compile Model
     model.compile(
-        optimizer='adam',
+        optimizer='SGD',
         loss='mean_squared_error',
         metrics=[
             tf.keras.metrics.MeanSquaredError()

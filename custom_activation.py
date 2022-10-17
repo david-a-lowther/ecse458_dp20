@@ -24,12 +24,17 @@ class LayerTest(Layer):
 
 
 def stop_operator(x):
+    """
+    Applies a "stop operator" function to a single value
+    """
     e = min(1, max(-1, x))
     return e
 
 
-# applies operator to a tensor instead of individual values like above
 def stop_operator_tensor(x):
+    """
+    Applies a "stop operator" function to a tensor
+    """
     # array of positive and negative ones
     ones = K.zeros_like(x) + 1
     neg_ones = K.zeros_like(x) - 1
@@ -37,11 +42,55 @@ def stop_operator_tensor(x):
     return e
 
 
-def stop_operator_recurrent(x, x_prev):
-    sum = x_prev**-1 + x + x**-1
+def stop_operator_recurrent(x, y_prev):
+    """
+    Applies a "stop operator" to a single value and its previous output
+    """
+    sum = y_prev**-1 + x + x**-1
     e = min(1, max(-1, sum))
     return e
 
+class StopOperator:
+    def __init__(self, y_prev):
+        self.y_prev = y_prev
+    def stop_operator_recurrent_tensor(self, x):
+        """
+        Applies a "stop operator" to a tensor and its previous output
+        """
+        if y_prev == None:
+            y_prev = K.zeros_like(x)
+
+        ones = K.zeros_like(x) + 1
+        neg_ones = K.zeros_like(x) - 1
+
+        sum = y_prev**-1 + x + x**-1
+        e = K.minimum(ones, K.maximum(neg_ones, sum))
+        y_prev = e
+        return e
+
+
+def make_activator(activations):
+    """
+    Creates an activation function that applies 2 functions to a tensor through slicing
+    """
+    def activator(t):
+        slices = tf.unstack(t, num=32, axis=0)
+        activated = []
+        i = 0
+        for slice in slices:
+            if i < len(slices) - 1:
+                activated.append(activations[0](slice))
+            else:
+                activated.append(activations[1](slice))
+            i += 1
+        return tf.stack(activated)
+
+    return activator
+
+
+# =================================================================================================
+# =========================================== PLOTTING ============================================
+# =================================================================================================
 
 def plot_activation_function(activation_f):
     x = np.linspace(-2, 2, num=100)
@@ -73,20 +122,10 @@ def plot_recurrent_activation_function():
     plt.show()
 
 
-def make_activator(activations):
-    def activator(t):
-        slices = tf.unstack(t, num=32, axis=0)
-        activated = []
-        i = 0
-        for slice in slices:
-            if i < len(slices) - 1:
-                activated.append(activations[0](slice))
-            else:
-                activated.append(activations[1](slice))
-            i += 1
-        return tf.stack(activated)
+# =================================================================================================
+# ====================================== EXECUTABLE SCRIPT ========================================
+# =================================================================================================
 
-    return activator
 
 # Test stop operator
 # plot_activation_function(stop_operator)
@@ -97,4 +136,3 @@ def make_activator(activations):
 # plot_tensor_activation_function(stop_operator_tensor)
 
 plot_recurrent_activation_function()
-
