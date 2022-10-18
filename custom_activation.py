@@ -5,22 +5,45 @@ from keras.layers import Layer, Activation
 import matplotlib.pyplot as plt
 
 
-class LayerTest(Layer):
-    def __init__(self, num_units, activation):
-        super(LayerTest, self).__init__()
-        self.num_units = num_units
-        self.activation = Activation(activation)
+class RecurrentPreisachLayer(Layer):
+    """
+    Attempt at a custom layer that stores the previous output in self.prev_out
+    TODO: Figure out how to get rid of InaccessibleTensorError (tf.collection?)
+    """
+    def __init__(self, output_dim, **kwargs):
+        super(RecurrentPreisachLayer, self).__init__(**kwargs)
+        self.output_dim = output_dim
+        self.prev_out = None
 
     def build(self, input_shape):
-        self.weight = self.add_weight(shape=[input_shape[-1], self.num_units])
-        self.bias = self.add_weight(shape=[self.num_units])
+        self.kernel = self.add_weight(
+            name='kernel',
+            shape=(input_shape[1], self.output_dim),
+            initializer='normal',
+            trainable=True
+        )
+        super(RecurrentPreisachLayer, self).build(input_shape)
 
     def call(self, input, mask=None):
-        y = tf.matmul(input, self.weight) + self.bias
-        y = self.activation(y)
-        return y
+        """
+        Applies a "stop operator" to a tensor and its previous output
+        """
+        if self.prev_out == None:
+            self.prev_out = K.zeros_like(input)
 
-    # model.add(LayerTest(128, activation='relu'))
+        ones = K.zeros_like(input) + 1
+        neg_ones = K.zeros_like(input) - 1
+
+        sum = tf.math.add(tf.math.pow(self.prev_out, -1), input)
+        sum = tf.math.add(sum, tf.math.pow(input, -1))
+        e = tf.math.minimum(ones, tf.math.maximum(neg_ones, sum))
+        self.prev_out = e
+
+        return e
+
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], self.output_dim)
 
 
 def stop_operator(x):
@@ -50,23 +73,22 @@ def stop_operator_recurrent(x, y_prev):
     e = min(1, max(-1, sum))
     return e
 
-class StopOperator:
-    def __init__(self, y_prev):
-        self.y_prev = y_prev
-    def stop_operator_recurrent_tensor(self, x):
-        """
-        Applies a "stop operator" to a tensor and its previous output
-        """
-        if y_prev == None:
-            y_prev = K.zeros_like(x)
 
-        ones = K.zeros_like(x) + 1
-        neg_ones = K.zeros_like(x) - 1
+def stop_operator_recurrent_tensor(x, y_prev):
+    """
+    Applies a "stop operator" to a tensor and its previous output
+    """
+    if y_prev == None:
+        y_prev = K.zeros_like(x)
 
-        sum = y_prev**-1 + x + x**-1
-        e = K.minimum(ones, K.maximum(neg_ones, sum))
-        y_prev = e
-        return e
+    ones = K.zeros_like(x) + 1
+    neg_ones = K.zeros_like(x) - 1
+
+    inv_y_prev = tf.math.pow(y_prev, -1)
+    sum = tf.math.add(inv_y_prev, x)
+    sum = tf.math.add(sum, tf.math.pow(x, -1))
+    e = K.minimum(ones, K.maximum(neg_ones, sum))
+    return e
 
 
 def make_activator(activations):

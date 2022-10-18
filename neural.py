@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-from custom_activation import stop_operator_tensor, StopOperator
+from custom_activation import stop_operator_tensor, stop_operator_recurrent_tensor, RecurrentPreisachLayer
 
 
 def format_data(H, B):
@@ -19,6 +19,9 @@ def format_data(H, B):
 
 
 def train_and_generate_NAME_network(x_train, y_train, save_name, n_epochs=100):
+    """
+    Template for generating a
+    """
     save_name = "models/" + save_name
     # Define model structure
     # Generate model
@@ -124,13 +127,11 @@ def train_and_generate_recurrent_preisach_network(x_train, y_train, save_name, n
     Preisach network uses stop operator as neuron activation function for first hidden layer
     """
 
-    act = StopOperator(None)
-
     model = tf.keras.models.Sequential()
-    model.add(tf.keras.layers.Dense(1, activation='linear'))                            # input layer
-    model.add(tf.keras.layers.Dense(128, activation=act.stop_operator_recurrent_tensor))    # stop operator layer
-    model.add(tf.keras.layers.Dense(128, activation='sigmoid'))                         # sigmoid layer
-    model.add(tf.keras.layers.Dense(1, activation='linear'))                            # output layer
+    model.add(tf.keras.layers.Dense(1, activation='linear'))  # input layer
+    model.add(RecurrentPreisachLayer(123))  # stop operator layer
+    model.add(tf.keras.layers.Dense(128, activation='sigmoid'))  # sigmoid layer
+    model.add(tf.keras.layers.Dense(1, activation='linear'))  # output layer
     # Compile Model
     model.compile(
         optimizer='SGD',
