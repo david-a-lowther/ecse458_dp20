@@ -144,7 +144,7 @@ def train_and_generate_recurrent_preisach_network(x_train, y_train, save_name, n
     model.fit(x_train, y_train, epochs=n_epochs)
     # Save model
     save_name = "models/" + save_name
-    model.save(save_name)
+    #model.save(save_name)
     # model.summary()
     # Return model
     return model

@@ -13,7 +13,7 @@ class RecurrentPreisachLayer(Layer):
     def __init__(self, output_dim, **kwargs):
         super(RecurrentPreisachLayer, self).__init__(**kwargs)
         self.output_dim = output_dim
-        self.prev_out = None
+        #self.prev_out = None
 
     def build(self, input_shape):
         self.kernel = self.add_weight(
@@ -22,22 +22,29 @@ class RecurrentPreisachLayer(Layer):
             initializer='normal',
             trainable=True
         )
+        print(input_shape)
+        b_init = tf.zeros_initializer()
+        self.prev_out = tf.Variable(
+            initial_value=b_init(shape=(input_shape[1],), dtype='float32'),
+            trainable=False)
         super(RecurrentPreisachLayer, self).build(input_shape)
 
+    @tf.function
     def call(self, input, mask=None):
         """
         Applies a "stop operator" to a tensor and its previous output
         """
-        if self.prev_out == None:
-            self.prev_out = K.zeros_like(input)
+        print(input.shape)
+        #if self.prev_out is None:
+        #    self.prev_out = K.zeros_like(input)
 
         ones = K.zeros_like(input) + 1
         neg_ones = K.zeros_like(input) - 1
 
-        sum = tf.math.add(tf.math.pow(self.prev_out, -1), input)
+        sum = tf.math.add(tf.math.pow(self.prev_out.read_value(), -1), input)
         sum = tf.math.add(sum, tf.math.pow(input, -1))
         e = tf.math.minimum(ones, tf.math.maximum(neg_ones, sum))
-        self.prev_out = e
+        self.prev_out.assign(e)
 
         return e
 
