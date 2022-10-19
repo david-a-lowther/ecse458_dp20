@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 class RecurrentPreisachLayer(Layer):
     """
-    Attempt at a custom layer that stores the previous output in self.prev_out
+    Attempt at a custom layer that stores the previous output in self.prev_out and previous input in prev_in
     TODO: Figure out how to get rid of InaccessibleTensorError (tf.collection?)
     """
     def __init__(self, output_dim, **kwargs):
@@ -27,24 +27,27 @@ class RecurrentPreisachLayer(Layer):
         self.prev_out = tf.Variable(
             initial_value=b_init(shape=(input_shape[1],), dtype='float32'),
             trainable=False)
+        self.prev_in = tf.Variable(
+            initial_value=b_init(shape=(input_shape[1],), dtype='float32'),
+            trainable=False)
         super(RecurrentPreisachLayer, self).build(input_shape)
 
     @tf.function
     def call(self, input, mask=None):
         """
         Applies a "stop operator" to a tensor and its previous output
+        y(t) = e(x(t) - x(t-1) + y(t-1))
+        e(z) = min(+1, max(-1, z))
         """
         print(input.shape)
-        #if self.prev_out is None:
-        #    self.prev_out = K.zeros_like(input)
 
         ones = K.zeros_like(input) + 1
         neg_ones = K.zeros_like(input) - 1
 
-        sum = tf.math.add(tf.math.pow(self.prev_out.read_value(), -1), input)
-        sum = tf.math.add(sum, tf.math.pow(input, -1))
-        e = tf.math.minimum(ones, tf.math.maximum(neg_ones, sum))
+        sum = tf.math.subtract(input, tf.math.add(self.prev_in, self.prev_out))  # x(t) - x(t-1) + y(t-1)
+        e = tf.math.minimum(ones, tf.math.maximum(neg_ones, sum))  # min(+1, max(-1, z))
         self.prev_out.assign(e)
+        self.prev_in.assign(input)
 
         return e
 
@@ -141,7 +144,8 @@ def plot_tensor_activation_function(activation_tensor_f):
 
 def plot_recurrent_activation_function():
     size = 500
-    x = np.reshape(np.vstack((np.linspace(-2, 2, num=size), np.linspace(2, -2, num=size))), size*2)
+    x_range = 10
+    x = np.reshape(np.vstack((np.linspace(-x_range, x_range, num=size), np.linspace(x_range, -x_range, num=size))), size*2)
     y = np.empty_like(x)
     x_prev = -1
     y_prev = -1
