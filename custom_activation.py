@@ -72,11 +72,11 @@ def stop_operator_tensor(x):
     return e
 
 
-def stop_operator_recurrent(x, y_prev):
+def stop_operator_recurrent(x, x_prev, y_prev):
     """
     Applies a "stop operator" to a single value and its previous output
     """
-    sum = y_prev**-1 + x + x**-1
+    sum = y_prev + x - x_prev
     e = min(1, max(-1, sum))
     return e
 
@@ -140,13 +140,15 @@ def plot_tensor_activation_function(activation_tensor_f):
 
 
 def plot_recurrent_activation_function():
-    size = 20
-    x = np.reshape(np.vstack((np.linspace(-1, 1, num=size), np.linspace(1, -1, num=size))), size*2)
+    size = 500
+    x = np.reshape(np.vstack((np.linspace(-2, 2, num=size), np.linspace(2, -2, num=size))), size*2)
     y = np.empty_like(x)
-    x_prev = -2
+    x_prev = -1
+    y_prev = -1
     for i in range(x.shape[0]):
-        y[i] = stop_operator_recurrent(x[i], x_prev)
+        y[i] = stop_operator_recurrent(x[i], x_prev, y_prev)
         x_prev = x[i]
+        y_prev = y[i]
     plt.plot(x, y)
     plt.show()
 
