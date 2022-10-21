@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 class RecurrentPreisachLayer(Layer):
     """
     Attempt at a custom layer that stores the previous output in self.prev_out and previous input in prev_in
-    TODO: Figure out how to get rid of InaccessibleTensorError (tf.collection?)
+    Applies the operation in the wrong dimension?
     """
     def __init__(self, output_dim, **kwargs):
         super(RecurrentPreisachLayer, self).__init__(**kwargs)
@@ -42,6 +42,9 @@ class RecurrentPreisachLayer(Layer):
         e(z) = min(+1, max(-1, z))
         """
 
+        #unstacked_in = tf.unstack(input)
+        #print("Unstacked input:", len(unstacked_in)) # Length of input pipeline batch size
+
         ones = K.zeros_like(input) + 1
         neg_ones = K.zeros_like(input) - 1
 
@@ -51,6 +54,63 @@ class RecurrentPreisachLayer(Layer):
         self.prev_in.assign(input)
 
         return e
+
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], self.output_dim)
+
+
+class RecurrentPreisachLayer2(Layer):
+    """
+    Attempt at a custom layer that stores the previous output in self.prev_out and previous input in prev_in
+    Applies the activation function along the input shape of (32, 1), which is the input batch size.
+    """
+    def __init__(self, output_dim, **kwargs):
+        super(RecurrentPreisachLayer2, self).__init__(**kwargs)
+        self.output_dim = output_dim
+
+    def build(self, input_shape):
+        self.kernel = self.add_weight(
+            name='kernel',
+            shape=(input_shape[1], self.output_dim),
+            initializer='normal',
+            trainable=True
+        )
+        b_init = tf.zeros_initializer()
+        self.prev_out = tf.Variable(
+            initial_value=b_init(shape=((1, )), dtype='float32'),
+            trainable=False,
+            synchronization=tf.VariableSynchronization.ON_WRITE
+        )
+        self.prev_in = tf.Variable(
+            initial_value=b_init(shape=((1, )), dtype='float32'),
+            trainable=False,
+            synchronization=tf.VariableSynchronization.ON_WRITE
+        )
+        super(RecurrentPreisachLayer2, self).build(input_shape)
+
+    @tf.function
+    def call(self, input, mask=None):
+        """
+        Applies a "stop operator" to a tensor and its previous output
+        y(t) = e(x(t) - x(t-1) + y(t-1))
+        e(z) = min(+1, max(-1, z))
+        """
+        unstacked_in = tf.unstack(input)  # Unstack input
+        unstacked_out = [stop_operator_tensor(
+            tf.math.subtract(unstacked_in[0], tf.math.add(self.prev_in, self.prev_out))
+        )]  # First value defined as y(0) = e(x[0])
+
+        for i in range(1, len(unstacked_in)): # Loop over remaining values in batch
+            sum = tf.math.subtract(unstacked_in[i], tf.math.add(unstacked_in[i-1], unstacked_out[i-1]))  # x(t) - x(t-1) + y(t-1)
+            e = stop_operator_tensor(sum)
+            unstacked_out.append(e)
+
+        self.prev_in.assign(unstacked_in[-1])    # Assign the last input in batch to prev_in
+        self.prev_out.assign(unstacked_out[-1])  # Assign last output in batch to prev_out
+
+        print(len(unstacked_out))
+        return tf.stack(unstacked_out)
 
 
     def compute_output_shape(self, input_shape):
@@ -72,7 +132,7 @@ def stop_operator_tensor(x):
     # array of positive and negative ones
     ones = K.zeros_like(x) + 1
     neg_ones = K.zeros_like(x) - 1
-    e = K.minimum(ones, K.maximum(neg_ones, x))
+    e = tf.math.minimum(ones, tf.math.maximum(neg_ones, x))
     return e
 
 
