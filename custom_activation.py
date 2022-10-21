@@ -13,7 +13,6 @@ class RecurrentPreisachLayer(Layer):
     def __init__(self, output_dim, **kwargs):
         super(RecurrentPreisachLayer, self).__init__(**kwargs)
         self.output_dim = output_dim
-        #self.prev_out = None
 
     def build(self, input_shape):
         self.kernel = self.add_weight(
@@ -22,14 +21,17 @@ class RecurrentPreisachLayer(Layer):
             initializer='normal',
             trainable=True
         )
-        print(input_shape)
         b_init = tf.zeros_initializer()
         self.prev_out = tf.Variable(
-            initial_value=b_init(shape=(input_shape[1],), dtype='float32'),
-            trainable=False)
+            initial_value=b_init(shape=((32, 1)), dtype='float32'),
+            trainable=False,
+            synchronization=tf.VariableSynchronization.ON_WRITE
+        )
         self.prev_in = tf.Variable(
-            initial_value=b_init(shape=(input_shape[1],), dtype='float32'),
-            trainable=False)
+            initial_value=b_init(shape=((32, 1)), dtype='float32'),
+            trainable=False,
+            synchronization=tf.VariableSynchronization.ON_WRITE
+        )
         super(RecurrentPreisachLayer, self).build(input_shape)
 
     @tf.function
@@ -39,7 +41,6 @@ class RecurrentPreisachLayer(Layer):
         y(t) = e(x(t) - x(t-1) + y(t-1))
         e(z) = min(+1, max(-1, z))
         """
-        print(input.shape)
 
         ones = K.zeros_like(input) + 1
         neg_ones = K.zeros_like(input) - 1

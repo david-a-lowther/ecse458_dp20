@@ -129,12 +129,12 @@ def train_and_generate_recurrent_preisach_network(x_train, y_train, save_name, n
 
     model = tf.keras.models.Sequential()
     model.add(tf.keras.layers.Dense(1, activation='linear'))  # input layer
-    model.add(RecurrentPreisachLayer(123))  # stop operator layer
-    model.add(tf.keras.layers.Dense(128, activation='sigmoid'))  # sigmoid layer
+    model.add(RecurrentPreisachLayer(10))  # stop operator layer
+    model.add(tf.keras.layers.Dense(10, activation='sigmoid'))  # sigmoid layer
     model.add(tf.keras.layers.Dense(1, activation='linear'))  # output layer
     # Compile Model
     model.compile(
-        optimizer='SGD',
+        optimizer='adam',
         loss='mean_squared_error',
         metrics=[
             tf.keras.metrics.MeanSquaredError()
