@@ -23,12 +23,12 @@ class RecurrentPreisachLayer(Layer):
         )
         b_init = tf.zeros_initializer()
         self.prev_out = tf.Variable(
-            initial_value=b_init(shape=((32, 1)), dtype='float32'),
+            initial_value=b_init(shape=((1,)), dtype='float32'),
             trainable=False,
             synchronization=tf.VariableSynchronization.ON_WRITE
         )
         self.prev_in = tf.Variable(
-            initial_value=b_init(shape=((32, 1)), dtype='float32'),
+            initial_value=b_init(shape=((1,)), dtype='float32'),
             trainable=False,
             synchronization=tf.VariableSynchronization.ON_WRITE
         )
@@ -42,6 +42,7 @@ class RecurrentPreisachLayer(Layer):
         e(z) = min(+1, max(-1, z))
         """
 
+        """
         ones = K.zeros_like(input) + 1
         neg_ones = K.zeros_like(input) - 1
 
@@ -49,8 +50,23 @@ class RecurrentPreisachLayer(Layer):
         e = tf.math.minimum(ones, tf.math.maximum(neg_ones, sum))  # min(+1, max(-1, z))
         self.prev_out.assign(e)
         self.prev_in.assign(input)
+        """
+        output = list()
+        print(input.get_shape())
+        idx = 0
+        for i in input:
+            ones = K.zeros_like(i) + 1
+            neg_ones = K.zeros_like(i) - 1
+            sum = tf.math.subtract(i, tf.math.add(self.prev_in, self.prev_out))
+            e = tf.math.minimum(ones, tf.math.maximum(neg_ones, sum))
+            self.prev_out.assign(e)
+            self.prev_in.assign(i)
 
-        return e
+            output.append([e])
+
+        #output = np.asarray(output)
+        output = tf.convert_to_tensor(output)
+        return output
 
 
     def compute_output_shape(self, input_shape):
