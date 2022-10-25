@@ -1,7 +1,8 @@
 import numpy as np
 import tensorflow as tf
 
-from custom_activation import stop_operator_tensor, stop_operator_recurrent_tensor, RecurrentPreisachLayer, RecurrentPreisachLayer2
+from custom_activation import stop_operator_tensor, stop_operator_recurrent_tensor, \
+    RecurrentPreisachLayer, RecurrentPreisachLayer2, RecurrentPreisachLayer3
 
 
 def format_data(H, B):
@@ -129,8 +130,8 @@ def train_and_generate_recurrent_preisach_network(x_train, y_train, save_name, n
 
     model = tf.keras.models.Sequential()
     model.add(tf.keras.layers.Dense(1, activation='linear'))  # input layer
-    model.add(RecurrentPreisachLayer2(128))  # stop operator layer
-    model.add(tf.keras.layers.Dense(128, activation='sigmoid'))  # sigmoid layer
+    model.add(RecurrentPreisachLayer3(10))  # stop operator layer
+    model.add(tf.keras.layers.Dense(10, activation='sigmoid'))  # sigmoid layer
     model.add(tf.keras.layers.Dense(1, activation='linear'))  # output layer
     # Compile Model
     model.compile(
