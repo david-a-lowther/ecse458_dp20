@@ -122,12 +122,12 @@ class RecurrentPreisachLayer3(keras.layers.Dense):
     def build(self, input_shape, **kwargs):
         b_init = tf.zeros_initializer()
         self.prev_out = tf.Variable(
-            initial_value=b_init(shape=((1,)), dtype='float32'),
+            initial_value=b_init(shape=((10,)), dtype='float32'),
             trainable=False,
             synchronization=tf.VariableSynchronization.ON_WRITE
         )
         self.prev_in = tf.Variable(
-            initial_value=b_init(shape=((1,)), dtype='float32'),
+            initial_value=b_init(shape=((10,)), dtype='float32'),
             trainable=False,
             synchronization=tf.VariableSynchronization.ON_WRITE
         )
@@ -214,27 +214,34 @@ class RecurrentPreisachLayer3(keras.layers.Dense):
             y(t) = e(x(t) - x(t-1) + y(t-1))
             e(z) = min(+1, max(-1, z))
             """
-            unstacked_in = tf.unstack(inputs)  # Unstack input
-            unstacked_out = [stop_operator_tensor(
-                tf.math.subtract(unstacked_in[0], tf.math.add(self.prev_in, self.prev_out))
-            )]  # First value defined as y(0) = e(x[0])
+            unstacked_outputs = tf.unstack(outputs)  # outputs is an array that we apply the activation to
+            i = 0
+            for output in unstacked_outputs:
+                unstacked_in = tf.unstack(output)  # Unstack each
+                unstacked_out = [stop_operator_tensor(
+                    tf.math.subtract(unstacked_in[0], tf.math.add(self.prev_in[i], self.prev_out[i]))
+                )]  # First value defined as y(0) = e(x[0])
 
-            for i in range(1, len(unstacked_in)):  # Loop over remaining values in batch
-                sum = tf.math.subtract(unstacked_in[i],
-                                       tf.math.add(unstacked_in[i - 1], unstacked_out[i - 1]))  # x(t) - x(t-1) + y(t-1)
-                e = stop_operator_tensor(sum)
-                unstacked_out.append(e)
+                for j in range(1, len(unstacked_in)):  # Loop over remaining values in batch
+                    sum = tf.math.subtract(unstacked_in[j], tf.math.add(unstacked_in[j - 1],
+                                                                        unstacked_out[j - 1]))  # x(t) - x(t-1) + y(t-1)
+                    e = stop_operator_tensor(sum)
+                    unstacked_out.append(e)
 
-            self.prev_in.assign(unstacked_in[-1])  # Assign the last input in batch to prev_in
-            self.prev_out.assign(unstacked_out[-1])  # Assign last output in batch to prev_out
+                unstacked_outputs[i] = tf.stack(unstacked_out)
+                i += 1
 
-            print(len(unstacked_out))
-            outputs = tf.stack(unstacked_out)
+            # self.prev_in.assign(unstacked_in[-1])  # Assign the last input in batch to prev_in
+            # self.prev_out.assign(unstacked_out[-1])  # Assign last output in batch to prev_out
+
+            return tf.stack(unstacked_outputs)
 
         if is_ragged:
             outputs = original_inputs.with_flat_values(outputs)
 
         return outputs
+
+
 
 
 def stop_operator(x):
