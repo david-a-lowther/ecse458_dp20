@@ -110,7 +110,7 @@ class RecurrentPreisachLayer2(Layer):
         self.prev_in.assign(unstacked_in[-1])    # Assign the last input in batch to prev_in
         self.prev_out.assign(unstacked_out[-1])  # Assign last output in batch to prev_out
 
-        print(len(unstacked_out))
+        #print(len(unstacked_out))
         return tf.stack(unstacked_out)
 
 
@@ -208,33 +208,37 @@ class RecurrentPreisachLayer3(keras.layers.Dense):
         if self.use_bias:
             outputs = tf.nn.bias_add(outputs, self.bias)
 
-        if self.activation is not None:
+        if self.activation is not None:  # Modified portion of the layer
             """
             Applies a "stop operator" to a tensor and its previous output
             y(t) = e(x(t) - x(t-1) + y(t-1))
             e(z) = min(+1, max(-1, z))
             """
-            unstacked_outputs = tf.unstack(outputs)  # outputs is an array that we apply the activation to
+            last_input = tf.unstack(outputs)[-1]
+
+            preprocessed_inputs = tf.unstack(tf.transpose(outputs))  # outputs is an array that we apply the activation to
+            # Need the transpose because otherwise we get a shape of (32, num_neurons). We want input of each neuron to
+            # be an array of length 32.
             i = 0
-            for output in unstacked_outputs:
-                unstacked_in = tf.unstack(output)  # Unstack each
-                unstacked_out = [stop_operator_tensor(
-                    tf.math.subtract(unstacked_in[0], tf.math.add(self.prev_in[i], self.prev_out[i]))
-                )]  # First value defined as y(0) = e(x[0])
+            for neuron_input in preprocessed_inputs:  # Each array of length 32 (input into 1 neuron)
+                # TODO: Vectorize for faster training/predictions
+                unstacked_neuron_in = tf.unstack(neuron_input)
+                unstacked_neuron_out = [stop_operator_tensor(
+                    tf.math.subtract(unstacked_neuron_in[0], tf.math.add(self.prev_in[i], self.prev_out[i]))
+                )]  # First output value defined as y(0) = e(x[0])
 
-                for j in range(1, len(unstacked_in)):  # Loop over remaining values in batch
-                    sum = tf.math.subtract(unstacked_in[j], tf.math.add(unstacked_in[j - 1],
-                                                                        unstacked_out[j - 1]))  # x(t) - x(t-1) + y(t-1)
+                for j in range(1, len(unstacked_neuron_in)):  # Loop over remaining values in batch
+                    sum = tf.math.subtract(unstacked_neuron_in[j], tf.math.add(unstacked_neuron_in[j - 1],
+                                                                        unstacked_neuron_out[j - 1]))  # x(t) - x(t-1) + y(t-1)
                     e = stop_operator_tensor(sum)
-                    unstacked_out.append(e)
+                    unstacked_neuron_out.append(e)
 
-                unstacked_outputs[i] = tf.stack(unstacked_out)
+                preprocessed_inputs[i] = tf.stack(unstacked_neuron_out)
                 i += 1
 
-            # self.prev_in.assign(unstacked_in[-1])  # Assign the last input in batch to prev_in
-            # self.prev_out.assign(unstacked_out[-1])  # Assign last output in batch to prev_out
-
-            return tf.stack(unstacked_outputs)
+            self.prev_in.assign(last_input)  # Assign the last input in batch to prev_in
+            outputs = tf.transpose(tf.stack(preprocessed_inputs))
+            self.prev_out.assign(tf.unstack(outputs)[-1])  # Assign last output in batch to prev_out
 
         if is_ragged:
             outputs = original_inputs.with_flat_values(outputs)
@@ -357,5 +361,4 @@ def plot_recurrent_activation_function():
 # plot_activation_function(K.relu)
 # plot_tensor_activation_function(K.softmax)
 # plot_tensor_activation_function(stop_operator_tensor)
-
-plot_recurrent_activation_function()
+# plot_recurrent_activation_function()

@@ -54,7 +54,7 @@ def shuffle_and_split(total_data, train_percent=80):
     random.shuffle(total_data)
     # split into train and test
     train_size = math.floor(len(total_data) * (train_percent/100))
-    print(train_size)
+    #print(train_size)
     train_set = total_data[:train_size]
     test_set = total_data[train_size:]
     return train_set, test_set
@@ -78,15 +78,15 @@ def split_input_output(data_set):
 
 
 # testing
-raw_data = extract_csv_info("./data_simulated/M19_29Gauge - Sheet1.csv")
-print(raw_data)
-formatted_data = format_data(raw_data)
-print(formatted_data)
-
-train, test = shuffle_and_split(formatted_data)
-print(train)
-print(test)
-
-train_x, train_y = split_input_output(train)
-test_x, test_y = split_input_output(test)
+# raw_data = extract_csv_info("./data_simulated/M19_29Gauge - Sheet1.csv")
+# print(raw_data)
+# formatted_data = format_data(raw_data)
+# print(formatted_data)
+#
+# train, test = shuffle_and_split(formatted_data)
+# print(train)
+# print(test)
+#
+# train_x, train_y = split_input_output(train)
+# test_x, test_y = split_input_output(test)
 
