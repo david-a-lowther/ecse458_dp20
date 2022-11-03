@@ -377,36 +377,55 @@ def plot_tensor_activation_function(activation_tensor_f):
     plt.show()
 
 
-def plot_recurrent_activation_function():
+def plot_stop_operator_af(dynamic=False, sine_input=False):
     """
     Plots the stop operator activation function in response to an input range from -x_range to x_range
+    If sine_input is true, the input sequence is a sinusoid. else, it is a linearly increasing/decreasing input
+    if dynamic is true, the plot is generated as an "animation"
     """
-    size = 200
+
+    figure, axis = plt.subplots(2, 1, figsize=(8, 8))
+
+    size = 50  # Number of samples for input
     x_range = 5
-    x = np.reshape(np.vstack((np.linspace(-x_range, x_range, num=size), np.linspace(x_range, -x_range, num=size))), size*2)
+    trail_sample_length = 20
+    if sine_input:
+        x = x_range * np.sin(np.linspace(0, x_range*4, num=size*2))
+    else:
+        x = np.reshape(np.vstack((np.linspace(-x_range, x_range, num=size), np.linspace(x_range, -x_range, num=size))), size*2)
+
     y = np.empty_like(x)
     x_prev = -1
     y_prev = -1
-
-    # Support generating loops in real time
-    figure = plt.figure()
-    graph = figure.add_subplot()
-
-    plt.ion()
-    plt.show()
 
     for i in range(x.shape[0]):
         y[i] = stop_operator_recurrent(x[i], x_prev, y_prev)
         x_prev = x[i]
         y_prev = y[i]
+        if dynamic:
+            low_range = i-trail_sample_length
+            if low_range < 0:
+                low_range=0
 
-        graph.clear()
-        plt.ylim(-1.2, 1.2)
-        plt.xlim(-x_range - 0.5, x_range + 0.5)
+            axis[0].clear()
+            axis[0].set_title('Input Sequence')
+            axis[0].set_ylim(-x_range - 0.5, x_range + 0.5)
+            axis[0].set_xlim(-1, trail_sample_length)
+            axis[0].plot(x[low_range:i])
 
-        graph.plot(x[0:i], y[0:i], color='red')
-        plt.pause(0.0001)
-    # plt.plot(x, y)
+            axis[1].clear()
+            axis[1].set_title('Stop operator output')
+            axis[1].set_ylim(-1.2, 1.2)
+            axis[1].set_xlim(-x_range - 0.5, x_range + 0.5)
+            axis[1].plot(x[low_range:i], y[low_range:i], color='red')
+
+
+            plt.pause(0.0001)
+    if not dynamic:
+        axis[0].plot(x)
+        axis[0].set_title('Input Sequence')
+        axis[1].set_title('Stop operator output')
+        axis[1].plot(x, y, color='red')
     plt.show(block=True)
 
 
@@ -422,4 +441,4 @@ def plot_recurrent_activation_function():
 # plot_activation_function(K.relu)
 # plot_tensor_activation_function(K.softmax)
 # plot_tensor_activation_function(stop_operator_tensor)
-plot_recurrent_activation_function()
+plot_stop_operator_af(dynamic=True, sine_input=True)
