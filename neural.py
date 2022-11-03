@@ -127,7 +127,6 @@ def train_and_generate_recurrent_preisach_network(x_train, y_train, save_name, n
     """
     Preisach network uses stop operator as neuron activation function for first hidden layer
     """
-
     model = tf.keras.models.Sequential()
     model.add(tf.keras.layers.Dense(1, activation='linear'))  # input layer
     model.add(RecurrentPreisachLayer3(10))  # stop operator layer

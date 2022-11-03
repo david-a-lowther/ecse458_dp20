@@ -4,6 +4,9 @@ from keras import backend as K
 import numpy as np
 from keras.layers import Layer, Activation
 import matplotlib.pyplot as plt
+from keras.dtensor import utils
+from keras.engine.input_spec import InputSpec
+from keras.engine.base_layer import Layer
 
 
 class RecurrentPreisachLayer(Layer):
@@ -120,6 +123,46 @@ class RecurrentPreisachLayer2(Layer):
 
 class RecurrentPreisachLayer3(keras.layers.Dense):
     def build(self, input_shape, **kwargs):
+        dtype = tf.as_dtype(self.dtype or backend.floatx())
+        if not (dtype.is_floating or dtype.is_complex):
+            raise TypeError(
+                "A Dense layer can only be built with a floating-point "
+                f"dtype. Received: dtype={dtype}"
+            )
+
+        input_shape = tf.TensorShape(input_shape)
+        last_dim = tf.compat.dimension_value(input_shape[-1])
+        if last_dim is None:
+            raise ValueError(
+                "The last dimension of the inputs to a Dense layer "
+                "should be defined. Found None. "
+                f"Full input shape received: {input_shape}"
+            )
+        self.input_spec = InputSpec(min_ndim=2, axes={-1: last_dim})
+        self.kernel = self.add_weight(
+            "kernel",
+            shape=[last_dim, self.units],
+            initializer=self.kernel_initializer,
+            regularizer=self.kernel_regularizer,
+            constraint=self.kernel_constraint,
+            dtype=self.dtype,
+            trainable=True,
+        )
+        if self.use_bias:
+            self.bias = self.add_weight(
+                "bias",
+                shape=[
+                    self.units,
+                ],
+                initializer=self.bias_initializer,
+                regularizer=self.bias_regularizer,
+                constraint=self.bias_constraint,
+                dtype=self.dtype,
+                trainable=True,
+            )
+        else:
+            self.bias = None
+        self.built = True
         b_init = tf.zeros_initializer()
         self.prev_out = tf.Variable(
             initial_value=b_init(shape=((10,)), dtype='float32'),
@@ -131,7 +174,7 @@ class RecurrentPreisachLayer3(keras.layers.Dense):
             trainable=False,
             synchronization=tf.VariableSynchronization.ON_WRITE
         )
-        super(RecurrentPreisachLayer3, self).build(input_shape, **kwargs)
+        # super(RecurrentPreisachLayer3, self).build(input_shape, **kwargs)
 
     def call(self, inputs):
         if inputs.dtype.base_dtype != self._compute_dtype_object.base_dtype:
@@ -208,7 +251,7 @@ class RecurrentPreisachLayer3(keras.layers.Dense):
         if self.use_bias:
             outputs = tf.nn.bias_add(outputs, self.bias)
 
-        if self.activation is not None:  # Modified portion of the layer
+        if True:  # Modified portion of the layer
             """
             Applies a "stop operator" to a tensor and its previous output
             y(t) = e(x(t) - x(t-1) + y(t-1))
@@ -361,4 +404,4 @@ def plot_recurrent_activation_function():
 # plot_activation_function(K.relu)
 # plot_tensor_activation_function(K.softmax)
 # plot_tensor_activation_function(stop_operator_tensor)
-# plot_recurrent_activation_function()
+plot_recurrent_activation_function()

@@ -22,6 +22,23 @@ def extract_csv_info(filepath) -> []:
     file.close()
     return data
 
+def extract_csv_info_datasets_folder(filepath) -> []:
+    """
+    Extracts most crucial data_simulated from csv file (for the purpose of this project).
+    Returns data as list of tuples (H, B)
+    """
+    file = open(filepath, encoding='utf-8-sig')
+    csv_reader = csv.reader(file)
+    data = list()
+    i = 0
+    for row in csv_reader:
+        h = float(row[0])
+        b = float(row[1])
+        # append to data list as (h, b) tuple
+        data.append((h, b))
+    file.close()
+    return data
+
 
 def format_data(hb_data):
     """
