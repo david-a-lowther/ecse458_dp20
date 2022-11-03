@@ -378,18 +378,36 @@ def plot_tensor_activation_function(activation_tensor_f):
 
 
 def plot_recurrent_activation_function():
-    size = 500
-    x_range = 10
+    """
+    Plots the stop operator activation function in response to an input range from -x_range to x_range
+    """
+    size = 200
+    x_range = 5
     x = np.reshape(np.vstack((np.linspace(-x_range, x_range, num=size), np.linspace(x_range, -x_range, num=size))), size*2)
     y = np.empty_like(x)
     x_prev = -1
     y_prev = -1
+
+    # Support generating loops in real time
+    figure = plt.figure()
+    graph = figure.add_subplot()
+
+    plt.ion()
+    plt.show()
+
     for i in range(x.shape[0]):
         y[i] = stop_operator_recurrent(x[i], x_prev, y_prev)
         x_prev = x[i]
         y_prev = y[i]
-    plt.plot(x, y)
-    plt.show()
+
+        graph.clear()
+        plt.ylim(-1.2, 1.2)
+        plt.xlim(-x_range - 0.5, x_range + 0.5)
+
+        graph.plot(x[0:i], y[0:i], color='red')
+        plt.pause(0.0001)
+    # plt.plot(x, y)
+    plt.show(block=True)
 
 
 # =================================================================================================
