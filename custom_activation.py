@@ -386,7 +386,7 @@ def plot_stop_operator_af(dynamic=False, sine_input=False):
 
     figure, axis = plt.subplots(2, 1, figsize=(8, 8))
 
-    size = 50  # Number of samples for input
+    size = 200  # Number of samples for input
     x_range = 5
     trail_sample_length = 20
     if sine_input:
@@ -418,7 +418,6 @@ def plot_stop_operator_af(dynamic=False, sine_input=False):
             axis[1].set_ylim(-1.2, 1.2)
             axis[1].set_xlim(-x_range - 0.5, x_range + 0.5)
             axis[1].plot(x[low_range:i], y[low_range:i], color='red')
-
 
             plt.pause(0.0001)
     if not dynamic:
