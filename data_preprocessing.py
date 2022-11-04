@@ -1,6 +1,7 @@
 import csv
 import math
 import random
+import numpy as np
 
 
 def extract_csv_info(filepath) -> []:
@@ -40,6 +41,10 @@ def extract_csv_info_datasets_folder(filepath) -> []:
     return data
 
 
+def format_data_preisach(hb_data):
+    hb_data = np.array(hb_data)
+    return hb_data[:, 0], hb_data[:, 1]
+
 def format_data(hb_data):
     """
     Input: list of tuples (H, B)
@@ -55,6 +60,7 @@ def format_data(hb_data):
             next_b = hb_data[i+1][1]
             # add as tuple
             formatted_data.append((current_h, current_b, next_h, next_b))
+
     return formatted_data
 
 

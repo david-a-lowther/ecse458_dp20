@@ -9,119 +9,7 @@ from keras.engine.input_spec import InputSpec
 from keras.engine.base_layer import Layer
 
 
-class RecurrentPreisachLayer(Layer):
-    """
-    Attempt at a custom layer that stores the previous output in self.prev_out and previous input in prev_in
-    Applies the operation in the wrong dimension?
-    """
-    def __init__(self, output_dim, **kwargs):
-        super(RecurrentPreisachLayer, self).__init__(**kwargs)
-        self.output_dim = output_dim
-
-    def build(self, input_shape):
-        self.kernel = self.add_weight(
-            name='kernel',
-            shape=(input_shape[1], self.output_dim),
-            initializer='normal',
-            trainable=True
-        )
-        b_init = tf.zeros_initializer()
-        self.prev_out = tf.Variable(
-            initial_value=b_init(shape=((32, 1)), dtype='float32'),
-            trainable=False,
-            synchronization=tf.VariableSynchronization.ON_WRITE
-        )
-        self.prev_in = tf.Variable(
-            initial_value=b_init(shape=((32, 1)), dtype='float32'),
-            trainable=False,
-            synchronization=tf.VariableSynchronization.ON_WRITE
-        )
-        super(RecurrentPreisachLayer, self).build(input_shape)
-
-    @tf.function
-    def call(self, input, mask=None):
-        """
-        Applies a "stop operator" to a tensor and its previous output
-        y(t) = e(x(t) - x(t-1) + y(t-1))
-        e(z) = min(+1, max(-1, z))
-        """
-
-        #unstacked_in = tf.unstack(input)
-        #print("Unstacked input:", len(unstacked_in)) # Length of input pipeline batch size
-
-        ones = K.zeros_like(input) + 1
-        neg_ones = K.zeros_like(input) - 1
-
-        sum = tf.math.subtract(input, tf.math.add(self.prev_in, self.prev_out))  # x(t) - x(t-1) + y(t-1)
-        e = tf.math.minimum(ones, tf.math.maximum(neg_ones, sum))  # min(+1, max(-1, z))
-        self.prev_out.assign(e)
-        self.prev_in.assign(input)
-
-        return e
-
-
-    def compute_output_shape(self, input_shape):
-        return (input_shape[0], self.output_dim)
-
-
-class RecurrentPreisachLayer2(Layer):
-    """
-    Attempt at a custom layer that stores the previous output in self.prev_out and previous input in prev_in
-    Applies the activation function along the input shape of (32, 1), which is the input batch size.
-    """
-    def __init__(self, output_dim, **kwargs):
-        super(RecurrentPreisachLayer2, self).__init__(**kwargs)
-        self.output_dim = output_dim
-
-    def build(self, input_shape):
-        self.kernel = self.add_weight(
-            name='kernel',
-            shape=(input_shape[1], self.output_dim),
-            initializer='normal',
-            trainable=True
-        )
-        b_init = tf.zeros_initializer()
-        self.prev_out = tf.Variable(
-            initial_value=b_init(shape=((1, )), dtype='float32'),
-            trainable=False,
-            synchronization=tf.VariableSynchronization.ON_WRITE
-        )
-        self.prev_in = tf.Variable(
-            initial_value=b_init(shape=((1, )), dtype='float32'),
-            trainable=False,
-            synchronization=tf.VariableSynchronization.ON_WRITE
-        )
-        super(RecurrentPreisachLayer2, self).build(input_shape)
-
-    @tf.function
-    def call(self, input, mask=None):
-        """
-        Applies a "stop operator" to a tensor and its previous output
-        y(t) = e(x(t) - x(t-1) + y(t-1))
-        e(z) = min(+1, max(-1, z))
-        """
-        unstacked_in = tf.unstack(input)  # Unstack input
-        unstacked_out = [stop_operator_tensor(
-            tf.math.subtract(unstacked_in[0], tf.math.add(self.prev_in, self.prev_out))
-        )]  # First value defined as y(0) = e(x[0])
-
-        for i in range(1, len(unstacked_in)): # Loop over remaining values in batch
-            sum = tf.math.subtract(unstacked_in[i], tf.math.add(unstacked_in[i-1], unstacked_out[i-1]))  # x(t) - x(t-1) + y(t-1)
-            e = stop_operator_tensor(sum)
-            unstacked_out.append(e)
-
-        self.prev_in.assign(unstacked_in[-1])    # Assign the last input in batch to prev_in
-        self.prev_out.assign(unstacked_out[-1])  # Assign last output in batch to prev_out
-
-        #print(len(unstacked_out))
-        return tf.stack(unstacked_out)
-
-
-    def compute_output_shape(self, input_shape):
-        return (input_shape[0], self.output_dim)
-
-
-class RecurrentPreisachLayer3(keras.layers.Dense):
+class RecurrentPreisachLayer(keras.layers.Dense):
     def build(self, input_shape, **kwargs):
         dtype = tf.as_dtype(self.dtype or backend.floatx())
         if not (dtype.is_floating or dtype.is_complex):
@@ -174,7 +62,6 @@ class RecurrentPreisachLayer3(keras.layers.Dense):
             trainable=False,
             synchronization=tf.VariableSynchronization.ON_WRITE
         )
-        # super(RecurrentPreisachLayer3, self).build(input_shape, **kwargs)
 
     def call(self, inputs):
         if inputs.dtype.base_dtype != self._compute_dtype_object.base_dtype:
@@ -258,37 +145,24 @@ class RecurrentPreisachLayer3(keras.layers.Dense):
             e(z) = min(+1, max(-1, z))
             """
             last_input = tf.unstack(outputs)[-1]
-
-            preprocessed_inputs = tf.unstack(tf.transpose(outputs))  # outputs is an array that we apply the activation to
-            # Need the transpose because otherwise we get a shape of (32, num_neurons). We want input of each neuron to
-            # be an array of length 32.
-            i = 0
-            for neuron_input in preprocessed_inputs:  # Each array of length 32 (input into 1 neuron)
-                # TODO: Vectorize for faster training/predictions
-                unstacked_neuron_in = tf.unstack(neuron_input)
-                unstacked_neuron_out = [stop_operator_tensor(
-                    tf.math.subtract(unstacked_neuron_in[0], tf.math.add(self.prev_in[i], self.prev_out[i]))
-                )]  # First output value defined as y(0) = e(x[0])
-
-                for j in range(1, len(unstacked_neuron_in)):  # Loop over remaining values in batch
-                    sum = tf.math.subtract(unstacked_neuron_in[j], tf.math.add(unstacked_neuron_in[j - 1],
-                                                                        unstacked_neuron_out[j - 1]))  # x(t) - x(t-1) + y(t-1)
-                    e = stop_operator_tensor(sum)
-                    unstacked_neuron_out.append(e)
-
-                preprocessed_inputs[i] = tf.stack(unstacked_neuron_out)
-                i += 1
+            input_vector = tf.unstack(outputs)
+            unstacked_neuron_out = [stop_operator_tensor(  # First input
+                tf.math.subtract(last_input, tf.math.add(self.prev_in, self.prev_out))
+            )]
+            for j in range(1, len(input_vector)):
+                sum = tf.math.subtract(input_vector[j], tf.math.add(input_vector[j - 1], input_vector[j - 1]))  # x(t) - x(t-1) + y(t-1)
+                e = stop_operator_tensor(sum)  # min(1, max(-1, sum))
+                unstacked_neuron_out.append(e)
+            # unstacked_neuron_out.append(last_input)
 
             self.prev_in.assign(last_input)  # Assign the last input in batch to prev_in
-            outputs = tf.transpose(tf.stack(preprocessed_inputs))
-            self.prev_out.assign(tf.unstack(outputs)[-1])  # Assign last output in batch to prev_out
+            self.prev_out.assign(unstacked_neuron_out[-1])  # Assign last output in batch to prev_out
+            outputs = tf.stack(unstacked_neuron_out)
 
         if is_ragged:
             outputs = original_inputs.with_flat_values(outputs)
 
         return outputs
-
-
 
 
 def stop_operator(x):
@@ -440,4 +314,4 @@ def plot_stop_operator_af(dynamic=False, sine_input=False):
 # plot_activation_function(K.relu)
 # plot_tensor_activation_function(K.softmax)
 # plot_tensor_activation_function(stop_operator_tensor)
-plot_stop_operator_af(dynamic=True, sine_input=True)
+# plot_stop_operator_af(dynamic=True, sine_input=True)

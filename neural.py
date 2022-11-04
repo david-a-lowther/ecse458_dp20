@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 from custom_activation import stop_operator_tensor, stop_operator_recurrent_tensor, \
-    RecurrentPreisachLayer, RecurrentPreisachLayer2, RecurrentPreisachLayer3
+    RecurrentPreisachLayer
 
 
 def format_data(H, B):
@@ -129,13 +129,13 @@ def train_and_generate_recurrent_preisach_network(x_train, y_train, save_name, n
     """
     model = tf.keras.models.Sequential()
     model.add(tf.keras.layers.Dense(1, activation='linear'))  # input layer
-    model.add(RecurrentPreisachLayer3(10))  # stop operator layer
-    model.add(tf.keras.layers.Dense(10, activation='sigmoid'))  # sigmoid layer
+    model.add(RecurrentPreisachLayer(10, name="stop_operator_layer", use_bias=False))  # stop operator layer
+    # model.add(tf.keras.layers.Dense(10, activation='sigmoid'))  # sigmoid layer
     model.add(tf.keras.layers.Dense(1, activation='linear'))  # output layer
     # Compile Model
     model.compile(
         optimizer='SGD',
-        loss='mean_squared_error',
+        loss=tf.keras.losses.MeanSquaredError(),
         metrics=[
             tf.keras.metrics.MeanSquaredError()
         ]
