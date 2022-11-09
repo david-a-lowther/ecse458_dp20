@@ -144,6 +144,7 @@ class RecurrentPreisachLayer(keras.layers.Dense):
             y(t) = e(x(t) - x(t-1) + y(t-1))
             e(z) = min(+1, max(-1, z))
             """
+            print(outputs.shape)
             last_input = tf.unstack(outputs)[-1]
             input_vector = tf.unstack(outputs)
             unstacked_neuron_out = [stop_operator_tensor(  # First input
@@ -193,7 +194,7 @@ def stop_operator_recurrent(x, x_prev, y_prev):
     return e
 
 
-def stop_operator_recurrent_tensor(x, y_prev):
+def stop_operator_recurrent_tensor(x, x_prev, y_prev):
     """
     Applies a "stop operator" to a tensor and its previous output
     """
@@ -203,9 +204,8 @@ def stop_operator_recurrent_tensor(x, y_prev):
     ones = K.zeros_like(x) + 1
     neg_ones = K.zeros_like(x) - 1
 
-    inv_y_prev = tf.math.pow(y_prev, -1)
-    sum = tf.math.add(inv_y_prev, x)
-    sum = tf.math.add(sum, tf.math.pow(x, -1))
+    sum = tf.math.subtract(x, tf.math.add(y_prev, x_prev))
+
     e = K.minimum(ones, K.maximum(neg_ones, sum))
     return e
 
@@ -303,6 +303,33 @@ def plot_stop_operator_af(dynamic=False, sine_input=False):
 
 
 # =================================================================================================
+# ============================================ TESTS ==============================================
+# =================================================================================================
+
+def test_custom_preisach_layer():
+    """ Incomplete unit test for RPNN layer """
+    L = RecurrentPreisachLayer(10, use_bias=False)
+    L.build((32, 1))
+    tensor_in = tf.constant(np.reshape(
+        np.vstack((np.linspace(-5, 5, num=16), np.linspace(5, -5, num=16))),
+        (32, 1)
+    ))
+    res = (L.call(tensor_in)).numpy()
+    expected_res = tf.unstack(tf.constant(np.reshape(
+        np.tile(np.vstack((np.linspace(-5, 5, num=16), np.linspace(5, -5, num=16))), 10),
+        (32, 10)
+    )))
+    y_prev = tf.zeros([10,])
+    x_prev = tf.zeros([10,])
+    for i, tensor in enumerate(expected_res):
+        expected_res[i] = stop_operator_recurrent_tensor(tensor, x_prev, y_prev)
+        x_prev = tensor
+        y_prev = expected_res[i]
+
+
+    assert tf.unstack(res) == expected_res
+
+# =================================================================================================
 # ====================================== EXECUTABLE SCRIPT ========================================
 # =================================================================================================
 
@@ -315,3 +342,6 @@ def plot_stop_operator_af(dynamic=False, sine_input=False):
 # plot_tensor_activation_function(K.softmax)
 # plot_tensor_activation_function(stop_operator_tensor)
 # plot_stop_operator_af(dynamic=True, sine_input=True)
+
+# test_custom_preisach_layer()
+
