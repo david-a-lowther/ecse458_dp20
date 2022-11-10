@@ -138,7 +138,7 @@ class RecurrentPreisachLayer(keras.layers.Dense):
         if self.use_bias:
             outputs = tf.nn.bias_add(outputs, self.bias)
 
-        if True:  # Modified portion of the layer
+        if outputs.shape[0] == 32:  # Modified portion of the layer
             """
             Applies a "stop operator" to a tensor and its previous output
             y(t) = e(x(t) - x(t-1) + y(t-1))

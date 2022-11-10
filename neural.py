@@ -70,12 +70,12 @@ def train_and_generate_recurrent_network(x_train, y_train, save_name, n_epochs=1
     # alternate input layer
     #model.add(tf.keras.layers.Dense(1, activation='linear'))  # Input layer (3 values for now)
 
-    model.add(tf.keras.layers.Dense(3))  # Input layer (3 values for now)
+    model.add(tf.keras.layers.Dense(1))  # Input layer (only input current H)
     model.add(tf.keras.layers.Dense(128, activation='sigmoid')) # First hidden layer
     model.add(tf.keras.layers.Embedding(input_dim=1000, output_dim=64))
     model.add(tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128)))
     model.add(tf.keras.layers.Dense(128, activation='sigmoid')) #Second hidden layer
-    model.add(tf.keras.layers.Dense(1, activation='linear'))  # output layer (next B value)
+    model.add(tf.keras.layers.Dense(1, activation='linear'))  # output layer (current B value)
     # Compile Model
     model.compile(optimizer='adam',
                   loss='mean_squared_error',
@@ -147,4 +147,38 @@ def train_and_generate_recurrent_preisach_network(x_train, y_train, save_name, n
     #model.save(save_name)
     # model.summary()
     # Return model
+    return model
+
+
+
+def compile_recurrent_preisach_network_without_training(save_name):
+    """
+    Same network as 'train_and_generate_recurrent_preisach_network' but no training
+    """
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.Dense(1,
+                                    activation='linear',
+                                    kernel_initializer=tf.keras.initializers.GlorotNormal(),
+                                    bias_initializer=tf.zeros_initializer()))  # input layer
+    model.add(RecurrentPreisachLayer(10,
+                                     name="stop_operator_layer",
+                                     use_bias=False,
+                                     kernel_initializer=tf.keras.initializers.GlorotNormal(),
+                                     bias_initializer=tf.zeros_initializer()))  # stop operator layer
+    model.add(tf.keras.layers.Dense(10,
+                                    activation='sigmoid',
+                                    kernel_initializer=tf.keras.initializers.GlorotNormal(),
+                                    bias_initializer=tf.zeros_initializer()))  # sigmoid layer
+    model.add(tf.keras.layers.Dense(1,
+                                    activation='linear',
+                                    kernel_initializer=tf.keras.initializers.GlorotNormal(),
+                                    bias_initializer=tf.zeros_initializer()))  # output layer
+    # Compile Model
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(),
+        loss=tf.keras.losses.MeanSquaredError(),
+        metrics=[
+            tf.keras.metrics.MeanSquaredError()
+        ]
+    )
     return model
