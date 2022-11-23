@@ -137,11 +137,12 @@ def train_and_generate_recurrent_preisach_network(x_train, y_train, save_name, n
         optimizer=tf.keras.optimizers.Adam(),
         loss=tf.keras.losses.MeanSquaredError(),
         metrics=[
-            tf.keras.metrics.MeanSquaredError()
+            tf.keras.metrics.MeanSquaredError(),
+            tf.keras.metrics.MeanAbsoluteError()
         ]
     )
     # Train model
-    model.fit(x_train, y_train, epochs=n_epochs)
+    model.fit(x_train, y_train, epochs=n_epochs, shuffle=False)
     # Save model
     save_name = "models/" + save_name
     #model.save(save_name)
@@ -178,7 +179,8 @@ def compile_recurrent_preisach_network_without_training(save_name):
         optimizer=tf.keras.optimizers.Adam(),
         loss=tf.keras.losses.MeanSquaredError(),
         metrics=[
-            tf.keras.metrics.MeanSquaredError()
+            tf.keras.metrics.MeanSquaredError(),
+            tf.keras.metrics.MeanAbsoluteError()
         ]
     )
     return model
