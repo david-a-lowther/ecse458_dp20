@@ -47,7 +47,8 @@ def train_and_generate_feedforward_network(x_train, y_train, save_name, n_epochs
         optimizer='adam',
         loss='mean_squared_error',
         metrics=[
-            tf.keras.metrics.MeanSquaredError()
+            tf.keras.metrics.MeanSquaredError(),
+            tf.keras.metrics.MeanAbsoluteError()
         ]
     )
     # Train model
@@ -80,7 +81,8 @@ def train_and_generate_recurrent_network(x_train, y_train, save_name, n_epochs=1
     model.compile(optimizer='adam',
                   loss='mean_squared_error',
                   metrics=[
-                      tf.keras.metrics.MeanSquaredError()
+                      tf.keras.metrics.MeanSquaredError(),
+                      tf.keras.metrics.MeanAbsoluteError()
                   ]
                   )
     # Train model
