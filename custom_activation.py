@@ -53,12 +53,12 @@ class RecurrentPreisachLayer(keras.layers.Dense):
         self.built = True
         b_init = tf.zeros_initializer()
         self.prev_out = tf.Variable(
-            initial_value=b_init(shape=((10,)), dtype='float32'),
+            initial_value=b_init(shape=((128,)), dtype='float32'),
             trainable=False,
             synchronization=tf.VariableSynchronization.ON_WRITE
         )
         self.prev_in = tf.Variable(
-            initial_value=b_init(shape=((10,)), dtype='float32'),
+            initial_value=b_init(shape=((128,)), dtype='float32'),
             trainable=False,
             synchronization=tf.VariableSynchronization.ON_WRITE
         )
@@ -138,22 +138,24 @@ class RecurrentPreisachLayer(keras.layers.Dense):
         if self.use_bias:
             outputs = tf.nn.bias_add(outputs, self.bias)
 
-        if outputs.shape[0] == 32:  # Modified portion of the layer
+        if True: # outputs.shape[0] == 32:  # Modified portion of the layer
             """
             Applies a "stop operator" to a tensor and its previous output
             y(t) = e(x(t) - x(t-1) + y(t-1))
             e(z) = min(+1, max(-1, z))
             """
-            print(outputs.shape)
+
             last_input = tf.unstack(outputs)[-1]
             input_vector = tf.unstack(outputs)
             unstacked_neuron_out = [stop_operator_tensor(  # First input
                 tf.math.subtract(last_input, tf.math.add(self.prev_in, self.prev_out))
             )]
             for j in range(1, len(input_vector)):
-                sum = tf.math.subtract(input_vector[j], tf.math.add(input_vector[j - 1], input_vector[j - 1]))  # x(t) - x(t-1) + y(t-1)
+
+                sum = tf.math.subtract(input_vector[j][0:127], tf.math.add(input_vector[j - 1][0:127], input_vector[j - 1][0:127]))  # x(t) - x(t-1) + y(t-1)
+                print('sum shape:', sum.shape)
                 e = stop_operator_tensor(sum)  # min(1, max(-1, sum))
-                unstacked_neuron_out.append(e)
+                unstacked_neuron_out.append(tf.concat([e, [input_vector[j - 1][-1]]], 0))
             # unstacked_neuron_out.append(last_input)
 
             self.prev_in.assign(last_input)  # Assign the last input in batch to prev_in
