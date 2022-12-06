@@ -14,6 +14,7 @@ Implemented using Python 3 with matplotlib, numpy and tensorflow (keras)
 ### ecse458_plotter
 #### main.py
 - Command line interface for demos etc.
+- Note: Outdated code and not functional
 #### neural.py
 - Definitions of neural networks
 - Training functions for the NNs
@@ -34,3 +35,4 @@ Implemented using Python 3 with matplotlib, numpy and tensorflow (keras)
 - Note: Not tracked by github intentionally, generated NNs had some issues with platform dependency. All NNs should be regenerated through the `test_networks.ipynb` notebook
 ### Preisach_Matlab_Generation
 - Contains MatLab code to generate Preisach data for NN training/validation/testing
+- Note: Not original code
